@@ -1,7 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
+	"http_server/internal/database"
 	"net/http"
 	"os"
 	"sync/atomic"
@@ -9,12 +11,22 @@ import (
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
+	db             *database.Queries
 }
 
 func main() {
+	dbURL := os.Getenv("DB_URL")
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		fmt.Println("Error connecting to the database:", err)
+	}
+	databaseQueries := database.New(db)
+
 	myApiConfig := apiConfig{
 		fileserverHits: atomic.Int32{},
+		db:             databaseQueries,
 	}
+
 	httpServerMux := http.NewServeMux()
 	// App Endpoint
 	fileServer := http.FileServer(http.Dir("."))
