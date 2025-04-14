@@ -14,7 +14,8 @@ type chirpMsgError struct {
 }
 
 type chirpMessageValid struct {
-	Valid bool `json:"valid"`
+	Valid        bool   `json:"valid"`
+	Cleaned_body string `json:"cleaned_body"`
 }
 
 func validate_chirp(writer http.ResponseWriter, request *http.Request) {
@@ -52,8 +53,10 @@ func validate_chirp(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	msgCleaned := cleanBadWords(msg.Body)
 	msgValid := chirpMessageValid{
-		Valid: true,
+		Valid:        true,
+		Cleaned_body: msgCleaned,
 	}
 	data, err := json.Marshal(msgValid)
 	if err != nil {
