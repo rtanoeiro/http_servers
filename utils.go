@@ -11,7 +11,7 @@ func respondWithError(writer http.ResponseWriter, code int, msg string) {
 	writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	log.Printf("Error marshalling JSON: %s", msg)
 	writer.WriteHeader(code)
-	writer.Write([]byte("Error marshalling JSON during initial request check"))
+	writer.Write([]byte(msg))
 }
 
 func respondWithJSON(writer http.ResponseWriter, code int, data []byte) {
