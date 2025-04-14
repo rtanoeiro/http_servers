@@ -2,7 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"http_server/internal/database"
+	"log"
 	"net/http"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type chirpMsg struct {
@@ -16,6 +21,10 @@ type chirpMsgError struct {
 type chirpMessageValid struct {
 	Valid        bool   `json:"valid"`
 	Cleaned_body string `json:"cleaned_body"`
+}
+
+type userAdd struct {
+	Email string `json:"email"`
 }
 
 func validate_chirp(writer http.ResponseWriter, request *http.Request) {
@@ -64,4 +73,53 @@ func validate_chirp(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	respondWithJSON(writer, http.StatusOK, data)
+}
+
+func (config *apiConfig) createUser(writer http.ResponseWriter, request *http.Request) {
+
+	decoder := json.NewDecoder(request.Body)
+	user := userAdd{}
+	err := decoder.Decode(&user)
+
+	if err != nil {
+		errorMsg := chirpMsgError{
+			Error: "Something went wrong",
+		}
+		data, err := json.Marshal(errorMsg)
+
+		if err != nil {
+			respondWithError(writer, http.StatusInternalServerError, "Error marshalling JSON during initial request check")
+			return
+		}
+		respondWithJSON(writer, http.StatusOK, data)
+		return
+	}
+
+	createUser := database.CreateUserParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Email:     user.Email,
+	}
+	createdUser, createError := config.db.CreateUser(request.Context(), createUser)
+	if createError != nil {
+		log.Println("CreateUser error:", createError)
+		respondWithError(writer, http.StatusInternalServerError, "Unable to create user")
+		return
+	}
+
+	returnUser := database.User{
+		ID:        createUser.ID,
+		CreatedAt: createUser.CreatedAt,
+		UpdatedAt: createUser.UpdatedAt,
+		Email:     createdUser.Email,
+	}
+	data, err := json.Marshal(returnUser)
+
+	if err != nil {
+		respondWithError(writer, http.StatusInternalServerError, "Error marshalling JSON during initial request check")
+		return
+	}
+	respondWithJSON(writer, http.StatusCreated, data)
+
 }

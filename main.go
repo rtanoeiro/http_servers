@@ -4,9 +4,13 @@ import (
 	"database/sql"
 	"fmt"
 	"http_server/internal/database"
+	"log"
 	"net/http"
 	"os"
 	"sync/atomic"
+
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 type apiConfig struct {
@@ -15,6 +19,11 @@ type apiConfig struct {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	dbURL := os.Getenv("DB_URL")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
@@ -36,6 +45,7 @@ func main() {
 	httpServerMux.Handle("GET /admin/metrics", http.HandlerFunc(myApiConfig.metrics))
 	httpServerMux.Handle("POST /admin/reset", http.HandlerFunc(myApiConfig.reset))
 	httpServerMux.Handle("POST /api/validate_chirp", http.HandlerFunc(validate_chirp))
+	httpServerMux.Handle("POST /api/users", http.HandlerFunc(myApiConfig.createUser))
 	httpServer := http.Server{
 		Handler: httpServerMux,
 		Addr:    ":8080",
