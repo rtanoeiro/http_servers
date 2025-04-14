@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"sync/atomic"
 )
 
@@ -19,10 +20,10 @@ func main() {
 	fileServer := http.FileServer(http.Dir("."))
 	httpServerMux.Handle("/app/", myApiConfig.middlewareMetricsInc(http.StripPrefix("/app", fileServer)))
 	// Health Endpoint
-	httpServerMux.Handle("/healthz/", myApiConfig.middlewareMetricsInc(http.HandlerFunc(healthz)))
-	httpServerMux.Handle("/metrics", http.HandlerFunc(myApiConfig.metrics))
-	httpServerMux.Handle("/reset", http.HandlerFunc(myApiConfig.reset))
-
+	httpServerMux.Handle("GET /api/healthz/", myApiConfig.middlewareMetricsInc(http.HandlerFunc(healthz)))
+	httpServerMux.Handle("GET /admin/metrics", http.HandlerFunc(myApiConfig.metrics))
+	httpServerMux.Handle("POST /admin/reset", http.HandlerFunc(myApiConfig.reset))
+	httpServerMux.Handle("POST /api/validate_chirp", http.HandlerFunc(validate_chirp))
 	httpServer := http.Server{
 		Handler: httpServerMux,
 		Addr:    ":8080",
@@ -55,9 +56,10 @@ func (cfg *apiConfig) reset(writer http.ResponseWriter, request *http.Request) {
 
 func (cfg *apiConfig) metrics(writer http.ResponseWriter, request *http.Request) {
 	header := writer.Header()
-	header.Set("Content-Type", "text/plain; charset=utf-8")
+	header.Set("Content-Type", "text/html; charset=utf-8")
 	writer.WriteHeader(http.StatusOK)
 	hits := cfg.fileserverHits.Load()
-	text := "Hits: " + fmt.Sprintf("%d", hits)
+	html, _ := os.ReadFile("metrics.html")
+	text := fmt.Sprintf(string(html), hits)
 	writer.Write([]byte(text))
 }
