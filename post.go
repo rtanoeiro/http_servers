@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"http_server/internal/database"
 	"log"
@@ -122,4 +123,16 @@ func (config *apiConfig) createUser(writer http.ResponseWriter, request *http.Re
 	}
 	respondWithJSON(writer, http.StatusCreated, data)
 
+}
+
+func (cfg *apiConfig) reset(writer http.ResponseWriter, request *http.Request) {
+	if cfg.env == "dev" {
+		deleteError := cfg.db.DeleteAllUsers(context.Background())
+
+		if deleteError != nil {
+			respondWithError(writer, http.StatusInternalServerError, "Unable to delete all users")
+		}
+	} else {
+		respondWithError(writer, http.StatusForbidden, "Unable to perform this action in this environment")
+	}
 }

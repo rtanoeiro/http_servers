@@ -16,6 +16,7 @@ import (
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
+	env            string
 }
 
 func main() {
@@ -25,6 +26,7 @@ func main() {
 	}
 
 	dbURL := os.Getenv("DB_URL")
+	env := os.Getenv("ENV")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		fmt.Println("Error connecting to the database:", err)
@@ -34,6 +36,7 @@ func main() {
 	myApiConfig := apiConfig{
 		fileserverHits: atomic.Int32{},
 		db:             databaseQueries,
+		env:            env,
 	}
 
 	httpServerMux := http.NewServeMux()
@@ -66,14 +69,6 @@ func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 		// This automatically starts the next handlers after incrementing hit count
 		next.ServeHTTP(writer, request)
 	})
-}
-
-func (cfg *apiConfig) reset(writer http.ResponseWriter, request *http.Request) {
-	cfg.fileserverHits = atomic.Int32{}
-	header := writer.Header()
-	header.Set("Content-Type", "text/plain; charset=utf-8")
-	writer.WriteHeader(http.StatusOK)
-	writer.Write([]byte("Server hits reduced to 0"))
 }
 
 func (cfg *apiConfig) metrics(writer http.ResponseWriter, request *http.Request) {
