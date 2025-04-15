@@ -2,14 +2,12 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 )
 
 func respondWithError(writer http.ResponseWriter, code int, msg string) {
 	writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	log.Printf("Error marshalling JSON: %s", msg)
 	writer.WriteHeader(code)
 	writer.Write([]byte(msg))
 }
