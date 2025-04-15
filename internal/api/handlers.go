@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"http_server/internal/database"
 	"log"
 	"net/http"
@@ -72,6 +73,16 @@ func (cfg *ApiConfig) Reset(writer http.ResponseWriter, request *http.Request) {
 	} else {
 		respondWithError(writer, http.StatusForbidden, "Unable to perform this action in this environment")
 	}
+}
+
+func (cfg *ApiConfig) Chirps(writer http.ResponseWriter, request *http.Request) {
+
+	httpStatusCode, data, valError := ProcessChirp(request)
+
+	if valError != nil {
+		respondWithError(writer, int(httpStatusCode), valError.Error())
+	}
+	respondWithJSON(writer, int(httpStatusCode), data)
 }
 
 // Get Methods

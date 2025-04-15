@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -19,7 +20,7 @@ func respondWithJSON(writer http.ResponseWriter, code int, data []byte) {
 	writer.Write(data)
 }
 
-func ValidateChirp(writer http.ResponseWriter, request *http.Request) {
+func ProcessChirp(request *http.Request) (int32, []byte, error) {
 
 	decoder := json.NewDecoder(request.Body)
 	msg := ChirpMsg{}
@@ -29,29 +30,27 @@ func ValidateChirp(writer http.ResponseWriter, request *http.Request) {
 		errorMsg := ChirpMsgError{
 			Error: "Something went wrong",
 		}
-		data, err := json.Marshal(errorMsg)
+		data, err := json.Marshal(errorMsg.Error)
 
+		// Failed to marshal the error message
 		if err != nil {
-			respondWithError(writer, http.StatusInternalServerError, "Error marshalling JSON during initial request check")
-			return
+			return http.StatusInternalServerError, []byte{}, errors.New("Error marshalling JSON during initial request check")
 		}
-		respondWithJSON(writer, http.StatusOK, data)
-		return
+		// Error could be marshalled and is sent
+		return http.StatusInternalServerError, data, nil
 	}
 
 	if len(msg.Body) > 140 {
 		errorMsg := ChirpMsgError{
 			Error: "Chirp is too long",
 		}
-		data, err := json.Marshal(errorMsg)
+		data, err := json.Marshal(errorMsg.Error)
 
 		if err != nil {
-			respondWithError(writer, http.StatusInternalServerError, "Error marshalling JSON during size check")
-			return
+			// Failed to marshal too long error msg
+			return http.StatusInternalServerError, []byte{}, errors.New("Error marshalling JSON during size check")
 		}
-
-		respondWithJSON(writer, http.StatusBadRequest, data)
-		return
+		return http.StatusBadRequest, data, nil
 	}
 
 	msgCleaned := CleanBadWords(msg.Body)
@@ -61,10 +60,9 @@ func ValidateChirp(writer http.ResponseWriter, request *http.Request) {
 	}
 	data, err := json.Marshal(msgValid)
 	if err != nil {
-		respondWithError(writer, http.StatusInternalServerError, "Error marshalling JSON before sending response")
-		return
+		return http.StatusInternalServerError, []byte{}, errors.New("Error marshalling JSON before sending response")
 	}
-	respondWithJSON(writer, http.StatusOK, data)
+	return http.StatusOK, data, nil
 }
 
 func CleanBadWords(text string) string {
