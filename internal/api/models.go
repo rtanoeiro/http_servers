@@ -3,6 +3,9 @@ package api
 import (
 	"http_server/internal/database"
 	"sync/atomic"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type ApiConfig struct {
@@ -24,6 +27,25 @@ type ChirpMessageValid struct {
 	Cleaned_body string `json:"cleaned_body"`
 }
 
+type ChirpRequest struct {
+	Body   string    `json:"body"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+type ChirpResponse struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
+type UserResponse struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
+}
 type UserAdd struct {
 	Email string `json:"email"`
 }
