@@ -135,6 +135,30 @@ func (cfg *ApiConfig) GetAllChirps(writer http.ResponseWriter, request *http.Req
 	respondWithJSON(writer, http.StatusOK, chirpsBytes)
 }
 
+func (cfg *ApiConfig) GetSingleChirp(writer http.ResponseWriter, request *http.Request) {
+	chirpID := uuid.MustParse(request.PathValue("chirpID"))
+	fmt.Println("Parsing ChirpID:", chirpID)
+	chirp, chirpError := cfg.Db.GetSingleChirp(request.Context(), chirpID)
+
+	if chirpError != nil {
+		respondWithError(writer, http.StatusNotFound, chirpError.Error())
+	}
+
+	chirpResponse := ChirpResponse{
+		ID:        chirp.ID,
+		CreatedAt: chirp.CreatedAt,
+		UpdatedAt: chirp.UpdatedAt,
+		Body:      chirp.Body,
+		UserID:    chirp.UserID,
+	}
+	chirpsBytes, err := json.Marshal(chirpResponse)
+
+	if err != nil {
+		respondWithError(writer, http.StatusInternalServerError, err.Error())
+	}
+	respondWithJSON(writer, http.StatusOK, chirpsBytes)
+}
+
 // Get Methods
 func Healthz(writer http.ResponseWriter, request *http.Request) {
 	header := writer.Header()

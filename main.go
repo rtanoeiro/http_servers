@@ -45,6 +45,8 @@ func main() {
 	httpServerMux.Handle("POST /api/users", http.HandlerFunc(myApiConfig.CreateUser))
 	httpServerMux.Handle("POST /api/chirps", http.HandlerFunc(myApiConfig.InsertChirp))
 	httpServerMux.Handle("GET /api/chirps", http.HandlerFunc(myApiConfig.GetAllChirps))
+	httpServerMux.Handle("GET /api/chirps/{chirpID}", http.HandlerFunc(myApiConfig.GetSingleChirp))
+
 	httpServer := http.Server{
 		Handler: httpServerMux,
 		Addr:    ":8080",
