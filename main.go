@@ -43,6 +43,7 @@ func main() {
 	httpServerMux.Handle("GET /admin/metrics", http.HandlerFunc(myApiConfig.Metrics))
 	httpServerMux.Handle("POST /admin/reset", http.HandlerFunc(myApiConfig.Reset))
 	httpServerMux.Handle("POST /api/users", http.HandlerFunc(myApiConfig.CreateUser))
+	httpServerMux.Handle("POST /api/login", http.HandlerFunc(myApiConfig.Login))
 	httpServerMux.Handle("POST /api/chirps", http.HandlerFunc(myApiConfig.InsertChirp))
 	httpServerMux.Handle("GET /api/chirps", http.HandlerFunc(myApiConfig.GetAllChirps))
 	httpServerMux.Handle("GET /api/chirps/{chirpID}", http.HandlerFunc(myApiConfig.GetSingleChirp))

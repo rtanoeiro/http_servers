@@ -12,19 +12,49 @@ import (
 	"github.com/google/uuid"
 )
 
+const checkUserLogin = `-- name: CheckUserLogin :one
+SELECT
+    id,
+    hashed_password,
+    created_at,
+    updated_at
+from users
+where email = $1
+`
+
+type CheckUserLoginRow struct {
+	ID             uuid.UUID
+	HashedPassword string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+func (q *Queries) CheckUserLogin(ctx context.Context, email string) (CheckUserLoginRow, error) {
+	row := q.db.QueryRowContext(ctx, checkUserLogin, email)
+	var i CheckUserLoginRow
+	err := row.Scan(
+		&i.ID,
+		&i.HashedPassword,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (id, created_at, updated_at, email)
+INSERT INTO users (id, created_at, updated_at, email, hashed_password)
 VALUES (
-    $1, $2, $3, $4
+    $1, $2, $3, $4, $5
 )
-RETURNING id, created_at, updated_at, email
+RETURNING id, created_at, updated_at, email, hashed_password
 `
 
 type CreateUserParams struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Email     string
+	ID             uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Email          string
+	HashedPassword string
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -33,6 +63,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.CreatedAt,
 		arg.UpdatedAt,
 		arg.Email,
+		arg.HashedPassword,
 	)
 	var i User
 	err := row.Scan(
@@ -40,6 +71,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Email,
+		&i.HashedPassword,
 	)
 	return i, err
 }

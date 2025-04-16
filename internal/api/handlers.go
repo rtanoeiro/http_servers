@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"http_server/internal/auth"
 	"http_server/internal/database"
 	"log"
 	"net/http"
@@ -33,12 +34,17 @@ func (config *ApiConfig) CreateUser(writer http.ResponseWriter, request *http.Re
 		respondWithJSON(writer, http.StatusOK, data)
 		return
 	}
+	hashedPassword, hashError := auth.HashPassword(user.Password)
 
+	if hashError != nil {
+		respondWithError(writer, http.StatusInternalServerError, hashError.Error())
+	}
 	createUser := database.CreateUserParams{
-		ID:        uuid.New(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		Email:     user.Email,
+		ID:             uuid.New(),
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+		Email:          user.Email,
+		HashedPassword: hashedPassword,
 	}
 	createdUser, createError := config.Db.CreateUser(request.Context(), createUser)
 	if createError != nil {
@@ -61,6 +67,45 @@ func (config *ApiConfig) CreateUser(writer http.ResponseWriter, request *http.Re
 	}
 	respondWithJSON(writer, http.StatusCreated, data)
 
+}
+
+func (cfg *ApiConfig) Login(writer http.ResponseWriter, request *http.Request) {
+	decoder := json.NewDecoder(request.Body)
+	user := UserLogin{}
+	err := decoder.Decode(&user)
+
+	if err != nil {
+		respondWithError(writer, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// hashProvided, errProvided := auth.HashPassword(user.Password)
+	userDetails, loginErr := cfg.Db.CheckUserLogin(request.Context(), user.Email)
+	if loginErr != nil {
+		respondWithError(writer, http.StatusUnauthorized, loginErr.Error())
+		return
+
+	}
+
+	results := auth.CheckPasswordHash(user.Password, userDetails.HashedPassword)
+	if results != nil {
+		respondWithError(writer, http.StatusUnauthorized, results.Error())
+		return
+	}
+
+	loginResponse := UserResponse{
+		ID:        userDetails.ID,
+		CreatedAt: userDetails.CreatedAt,
+		UpdatedAt: userDetails.UpdatedAt,
+		Email:     user.Email,
+	}
+	loginBytes, marshalError := json.Marshal(loginResponse)
+
+	if marshalError != nil {
+		respondWithError(writer, http.StatusUnauthorized, marshalError.Error())
+		return
+	}
+	respondWithJSON(writer, http.StatusOK, loginBytes)
 }
 
 func (cfg *ApiConfig) Reset(writer http.ResponseWriter, request *http.Request) {
