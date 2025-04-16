@@ -110,6 +110,31 @@ func (cfg *ApiConfig) InsertChirp(writer http.ResponseWriter, request *http.Requ
 	respondWithJSON(writer, http.StatusCreated, chirpBytes)
 }
 
+func (cfg *ApiConfig) GetAllChirps(writer http.ResponseWriter, request *http.Request) {
+	allChirps, chirpError := cfg.Db.GetAllChirps(request.Context())
+
+	if chirpError != nil {
+		respondWithError(writer, http.StatusInternalServerError, chirpError.Error())
+	}
+
+	chirpsResponse := make([]ChirpResponse, len(allChirps))
+	for i, chirp := range allChirps {
+		chirpsResponse[i] = ChirpResponse{
+			ID:        chirp.ID,
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
+			Body:      chirp.Body,
+			UserID:    chirp.UserID,
+		}
+	}
+	chirpsBytes, err := json.Marshal(chirpsResponse)
+
+	if err != nil {
+		respondWithError(writer, http.StatusInternalServerError, err.Error())
+	}
+	respondWithJSON(writer, http.StatusOK, chirpsBytes)
+}
+
 // Get Methods
 func Healthz(writer http.ResponseWriter, request *http.Request) {
 	header := writer.Header()
