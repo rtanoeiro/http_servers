@@ -47,7 +47,7 @@ func (config *ApiConfig) CreateUser(writer http.ResponseWriter, request *http.Re
 		return
 	}
 
-	returnUser := database.User{
+	returnUser := UserResponse{
 		ID:        createUser.ID,
 		CreatedAt: createUser.CreatedAt,
 		UpdatedAt: createUser.UpdatedAt,
@@ -78,12 +78,36 @@ func (cfg *ApiConfig) Reset(writer http.ResponseWriter, request *http.Request) {
 
 func (cfg *ApiConfig) Chirps(writer http.ResponseWriter, request *http.Request) {
 
-	httpStatusCode, data, valError := ProcessChirp(request)
+	httpStatusCode, chirpRequest, valError := ProcessChirp(request)
 
 	if valError != nil {
 		respondWithError(writer, int(httpStatusCode), valError.Error())
 	}
-	respondWithJSON(writer, int(httpStatusCode), data)
+	args := database.InsertChirpParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Body:      chirpRequest.Body,
+		UserID:    chirpRequest.UserID,
+	}
+	chirp, errorInsert := cfg.Db.InsertChirp(request.Context(), args)
+
+	if errorInsert != nil {
+		respondWithError(writer, http.StatusInternalServerError, errorInsert.Error())
+	}
+	chirpResponse := ChirpResponse{
+		ID:        chirp.ID,
+		CreatedAt: chirp.CreatedAt,
+		UpdatedAt: chirp.UpdatedAt,
+		Body:      chirp.Body,
+		UserID:    chirp.UserID,
+	}
+	chirpBytes, marshalError := json.Marshal(chirpResponse)
+
+	if marshalError != nil {
+		respondWithError(writer, http.StatusInternalServerError, marshalError.Error())
+	}
+	respondWithJSON(writer, http.StatusCreated, chirpBytes)
 }
 
 // Get Methods

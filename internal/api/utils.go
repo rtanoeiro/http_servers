@@ -20,49 +20,37 @@ func respondWithJSON(writer http.ResponseWriter, code int, data []byte) {
 	writer.Write(data)
 }
 
-func ProcessChirp(request *http.Request) (int32, []byte, error) {
+func ProcessChirp(request *http.Request) (int32, ChirpRequest, error) {
 
 	decoder := json.NewDecoder(request.Body)
-	msg := ChirpMsg{}
-	err := decoder.Decode(&msg)
+	chirpRequest := ChirpRequest{}
+	err := decoder.Decode(&chirpRequest)
 
 	if err != nil {
 		errorMsg := ChirpMsgError{
 			Error: "Something went wrong",
 		}
-		data, err := json.Marshal(errorMsg.Error)
-
-		// Failed to marshal the error message
-		if err != nil {
-			return http.StatusInternalServerError, []byte{}, errors.New("Error marshalling JSON during initial request check")
-		}
-		// Error could be marshalled and is sent
-		return http.StatusInternalServerError, data, nil
+		return http.StatusInternalServerError, ChirpRequest{
+			Body:   "",
+			UserID: chirpRequest.UserID,
+		}, errors.New(errorMsg.Error)
 	}
 
-	if len(msg.Body) > 140 {
+	if len(chirpRequest.Body) > 140 {
 		errorMsg := ChirpMsgError{
 			Error: "Chirp is too long",
 		}
-		data, err := json.Marshal(errorMsg.Error)
-
-		if err != nil {
-			// Failed to marshal too long error msg
-			return http.StatusInternalServerError, []byte{}, errors.New("Error marshalling JSON during size check")
-		}
-		return http.StatusBadRequest, data, nil
+		return http.StatusBadRequest, ChirpRequest{
+			Body:   "",
+			UserID: chirpRequest.UserID}, errors.New(errorMsg.Error)
 	}
 
-	msgCleaned := CleanBadWords(msg.Body)
-	msgValid := ChirpMessageValid{
-		Valid:        true,
-		Cleaned_body: msgCleaned,
+	msgCleaned := CleanBadWords(chirpRequest.Body)
+	cleanChirp := ChirpRequest{
+		Body:   msgCleaned,
+		UserID: chirpRequest.UserID,
 	}
-	data, err := json.Marshal(msgValid)
-	if err != nil {
-		return http.StatusInternalServerError, []byte{}, errors.New("Error marshalling JSON before sending response")
-	}
-	return http.StatusOK, data, nil
+	return http.StatusOK, cleanChirp, nil
 }
 
 func CleanBadWords(text string) string {
