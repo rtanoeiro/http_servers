@@ -41,7 +41,7 @@ func main() {
 	// Health Endpoint
 	httpServerMux.Handle("GET /api/healthz/", myApiConfig.MiddlewareMetricsInc(http.HandlerFunc(api.Healthz)))
 	httpServerMux.Handle("GET /admin/metrics", http.HandlerFunc(myApiConfig.Metrics))
-	httpServerMux.Handle("POST /admin/reset", http.HandlerFunc(myApiConfig.Reset))
+	httpServerMux.Handle("POST /admin/reset", http.HandlerFunc(myApiConfig.ResetUsers))
 	httpServerMux.Handle("POST /api/users", http.HandlerFunc(myApiConfig.CreateUser))
 	httpServerMux.Handle("POST /api/login", http.HandlerFunc(myApiConfig.Login))
 	httpServerMux.Handle("POST /api/chirps", http.HandlerFunc(myApiConfig.InsertChirp))
