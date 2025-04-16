@@ -43,7 +43,7 @@ func main() {
 	httpServerMux.Handle("GET /admin/metrics", http.HandlerFunc(myApiConfig.Metrics))
 	httpServerMux.Handle("POST /admin/reset", http.HandlerFunc(myApiConfig.Reset))
 	httpServerMux.Handle("POST /api/users", http.HandlerFunc(myApiConfig.CreateUser))
-	httpServerMux.Handle("POST /api/chirps", http.HandlerFunc(myApiConfig.Chirps))
+	httpServerMux.Handle("POST /api/chirps", http.HandlerFunc(myApiConfig.InsertChirp))
 	httpServer := http.Server{
 		Handler: httpServerMux,
 		Addr:    ":8080",

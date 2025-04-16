@@ -76,7 +76,7 @@ func (cfg *ApiConfig) Reset(writer http.ResponseWriter, request *http.Request) {
 	respondWithJSON(writer, http.StatusOK, []byte{})
 }
 
-func (cfg *ApiConfig) Chirps(writer http.ResponseWriter, request *http.Request) {
+func (cfg *ApiConfig) InsertChirp(writer http.ResponseWriter, request *http.Request) {
 
 	httpStatusCode, chirpRequest, valError := ProcessChirp(request)
 
