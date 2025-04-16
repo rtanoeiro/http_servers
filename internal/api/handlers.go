@@ -68,11 +68,12 @@ func (cfg *ApiConfig) Reset(writer http.ResponseWriter, request *http.Request) {
 		deleteError := cfg.Db.DeleteAllUsers(context.Background())
 
 		if deleteError != nil {
-			respondWithError(writer, http.StatusInternalServerError, "Unable to delete all users")
+			respondWithError(writer, http.StatusInternalServerError, deleteError.Error())
 		}
 	} else {
 		respondWithError(writer, http.StatusForbidden, "Unable to perform this action in this environment")
 	}
+	respondWithJSON(writer, http.StatusOK, []byte{})
 }
 
 func (cfg *ApiConfig) Chirps(writer http.ResponseWriter, request *http.Request) {
