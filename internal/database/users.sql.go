@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const checkUserLogin = `-- name: CheckUserLogin :one
+const checkUserWithEmail = `-- name: CheckUserWithEmail :one
 SELECT
     id,
     hashed_password,
@@ -22,16 +22,16 @@ from users
 where email = $1
 `
 
-type CheckUserLoginRow struct {
+type CheckUserWithEmailRow struct {
 	ID             uuid.UUID
 	HashedPassword string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
 
-func (q *Queries) CheckUserLogin(ctx context.Context, email string) (CheckUserLoginRow, error) {
-	row := q.db.QueryRowContext(ctx, checkUserLogin, email)
-	var i CheckUserLoginRow
+func (q *Queries) CheckUserWithEmail(ctx context.Context, email string) (CheckUserWithEmailRow, error) {
+	row := q.db.QueryRowContext(ctx, checkUserWithEmail, email)
+	var i CheckUserWithEmailRow
 	err := row.Scan(
 		&i.ID,
 		&i.HashedPassword,
@@ -39,6 +39,19 @@ func (q *Queries) CheckUserLogin(ctx context.Context, email string) (CheckUserLo
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const checkUserWithID = `-- name: CheckUserWithID :one
+SELECT
+    id
+from users
+where id = $1
+`
+
+func (q *Queries) CheckUserWithID(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, checkUserWithID, id)
+	err := row.Scan(&id)
+	return id, err
 }
 
 const createUser = `-- name: CreateUser :one
@@ -83,4 +96,34 @@ TRUNCATE TABLE users CASCADE
 func (q *Queries) DeleteAllUsers(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, deleteAllUsers)
 	return err
+}
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE users
+SET
+    updated_at = NOW(),
+    email = $1,
+    hashed_password = $2
+WHERE id = $3
+
+RETURNING id, created_at, updated_at, email, hashed_password
+`
+
+type UpdateUserParams struct {
+	Email          string
+	HashedPassword string
+	ID             uuid.UUID
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUser, arg.Email, arg.HashedPassword, arg.ID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Email,
+		&i.HashedPassword,
+	)
+	return i, err
 }

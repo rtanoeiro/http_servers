@@ -15,17 +15,8 @@ type ApiConfig struct {
 	Secret         string
 }
 
-type ChirpMsg struct {
-	Body string `json:"body"`
-}
-
 type ChirpMsgError struct {
 	Error string `json:"error"`
-}
-
-type ChirpMessageValid struct {
-	Valid        bool   `json:"valid"`
-	Cleaned_body string `json:"cleaned_body"`
 }
 
 type ChirpRequest struct {
@@ -38,6 +29,10 @@ type ChirpResponse struct {
 	UpdatedAt time.Time `json:"updated_at"`
 	Body      string    `json:"body"`
 	UserID    uuid.UUID `json:"user_id"`
+}
+
+type RefreshResponse struct {
+	Token string `json:"token"`
 }
 
 type UserResponse struct {
@@ -53,12 +48,11 @@ type UserAdd struct {
 	Password string `json:"password"`
 }
 
-type RefreshResponse struct {
-	Token string `json:"token"`
+type UserLogin struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
-type UserLogin struct {
-	Email            string `json:"email"`
-	Password         string `json:"password"`
-	ExpiresInSeconds *int   `json:"expires_in_seconds,omitempty"`
+type UpdateUser struct {
+	Email string `json:"email"`
 }

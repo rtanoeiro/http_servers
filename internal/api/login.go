@@ -10,15 +10,13 @@ import (
 )
 
 func (cfg *ApiConfig) Login(writer http.ResponseWriter, request *http.Request) {
-	decoder := json.NewDecoder(request.Body)
-	user := UserLogin{}
-	err := decoder.Decode(&user)
-	if err != nil {
-		respondWithError(writer, http.StatusInternalServerError, err.Error())
+	user, userError := GetLoginDetails(writer, request)
+	if userError != nil {
+		respondWithError(writer, http.StatusBadRequest, userError.Error())
 		return
 	}
 
-	userDetails, loginErr := cfg.Db.CheckUserLogin(request.Context(), user.Email)
+	userDetails, loginErr := cfg.Db.CheckUserWithEmail(request.Context(), user.Email)
 	if loginErr != nil {
 		respondWithError(writer, http.StatusUnauthorized, loginErr.Error())
 		return
@@ -37,14 +35,14 @@ func (cfg *ApiConfig) Login(writer http.ResponseWriter, request *http.Request) {
 		respondWithError(writer, http.StatusUnauthorized, errJWTToken.Error())
 		return
 	}
-	log.Println("JWT Token Created with Success:", userJWTToken)
+	log.Println("JWT Token Created with Success during login:", userJWTToken)
 
 	userResfreshToken, errRefreshToken := MakeRefreshToken()
 	if errRefreshToken != nil {
 		respondWithError(writer, http.StatusUnauthorized, errRefreshToken.Error())
 		return
 	}
-	log.Println("Refresh Token Created with Success:", userResfreshToken)
+	log.Println("Refresh Token Created with Success during login:", userResfreshToken)
 	refreshTokenParams := database.CreateRefreshTokenParams{
 		Token:     userResfreshToken,
 		UserID:    userDetails.ID,
@@ -55,7 +53,7 @@ func (cfg *ApiConfig) Login(writer http.ResponseWriter, request *http.Request) {
 		respondWithError(writer, http.StatusUnauthorized, errRefreshToken.Error())
 		return
 	}
-	log.Println("Refresh Token Details Created with Success. \n- User:", refreshTokenDetails.UserID, "\n- Created At:", refreshTokenDetails.CreatedAt, "\n- Updated At:", refreshTokenDetails.UpdatedAt, "\n- Expires At:", refreshTokenDetails.ExpiresAt)
+	log.Println("Refresh Token Details Created with Success during login. \n- User:", refreshTokenDetails.UserID, "\n- Created At:", refreshTokenDetails.CreatedAt, "\n- Updated At:", refreshTokenDetails.UpdatedAt, "\n- Expires At:", refreshTokenDetails.ExpiresAt)
 
 	loginResponse := UserResponse{
 		ID:           userDetails.ID,
@@ -72,6 +70,17 @@ func (cfg *ApiConfig) Login(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	respondWithJSON(writer, http.StatusOK, loginBytes)
+}
+
+func GetLoginDetails(writer http.ResponseWriter, request *http.Request) (UserLogin, error) {
+	decoder := json.NewDecoder(request.Body)
+	user := UserLogin{}
+	err := decoder.Decode(&user)
+	if err != nil {
+		respondWithError(writer, http.StatusInternalServerError, err.Error())
+		return UserLogin{}, err
+	}
+	return user, nil
 }
 
 func (cfg *ApiConfig) Refresh(writer http.ResponseWriter, request *http.Request) {
@@ -113,4 +122,68 @@ func (cfg *ApiConfig) Revoke(writer http.ResponseWriter, request *http.Request) 
 
 	cfg.Db.RevokeRefreshToken(request.Context(), refreshToken)
 	respondWithJSON(writer, http.StatusNoContent, []byte{})
+}
+
+func (cfg *ApiConfig) UpdateUser(writer http.ResponseWriter, request *http.Request) {
+	updateDetails, errorUpdate := GetLoginDetails(writer, request)
+	if errorUpdate != nil {
+		respondWithError(writer, http.StatusBadRequest, errorUpdate.Error())
+		return
+	}
+	log.Println("Update User Details during Update:", updateDetails)
+
+	accesToken, errToken := GetBearerToken(request.Header)
+	if errToken != nil {
+		respondWithError(writer, http.StatusUnauthorized, errToken.Error())
+		return
+	}
+	log.Println("Access Token from Request during update:", accesToken)
+
+	userID, validateErr := ValidateJWT(accesToken, cfg.Secret)
+	if validateErr != nil {
+		respondWithError(writer, http.StatusUnauthorized, validateErr.Error())
+		return
+	}
+	log.Println("User ID from Access Token during update:", userID)
+
+	userDbID, dbError := cfg.Db.CheckUserWithID(request.Context(), userID)
+	if dbError != nil {
+		respondWithError(writer, http.StatusInternalServerError, dbError.Error())
+		return
+	}
+	log.Println("User ID from DB during update:", userDbID)
+
+	if userID != userDbID {
+		respondWithError(writer, http.StatusUnauthorized, "Unable to update email/password for other user")
+		return
+	}
+
+	newHashPass, errorHash := auth.HashPassword(updateDetails.Password)
+	if errorHash != nil {
+		respondWithError(writer, http.StatusInternalServerError, errorHash.Error())
+		return
+	}
+	log.Println("New Hashed Password during update:", newHashPass)
+	updateParams := database.UpdateUserParams{
+		Email:          updateDetails.Email,
+		HashedPassword: newHashPass,
+		ID:             userID,
+	}
+
+	newUser, updateError := cfg.Db.UpdateUser(request.Context(), updateParams)
+	if updateError != nil {
+		respondWithError(writer, http.StatusInternalServerError, updateError.Error())
+		return
+	}
+	log.Println("User Details after update. \n- User:", newUser.ID, "\n- Hashed Password:", newUser.HashedPassword, "\n- Created At:", newUser.CreatedAt, "\n- Updated At:", newUser.UpdatedAt)
+	response := UpdateUser{
+		Email: newUser.Email,
+	}
+	responseBytes, errorMarshal := json.Marshal(response)
+	if errorMarshal != nil {
+		respondWithError(writer, http.StatusInternalServerError, errorMarshal.Error())
+		return
+	}
+	respondWithJSON(writer, http.StatusOK, responseBytes)
+
 }

@@ -45,6 +45,7 @@ func main() {
 	httpServerMux.Handle("GET /admin/metrics", http.HandlerFunc(myApiConfig.Metrics))
 	httpServerMux.Handle("POST /admin/reset", http.HandlerFunc(myApiConfig.ResetUsers))
 	httpServerMux.Handle("POST /api/users", http.HandlerFunc(myApiConfig.CreateUser))
+	httpServerMux.Handle("PUT /api/users", http.HandlerFunc(myApiConfig.UpdateUser))
 	httpServerMux.Handle("POST /api/refresh", http.HandlerFunc(myApiConfig.Refresh))
 	httpServerMux.Handle("POST /api/revoke", http.HandlerFunc(myApiConfig.Revoke))
 	httpServerMux.Handle("POST /api/login", http.HandlerFunc(myApiConfig.Login))
