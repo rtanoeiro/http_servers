@@ -1,17 +1,12 @@
 package api
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"http_server/internal/auth"
+	"http_server/internal/database"
+	"log"
 	"net/http"
-	"strings"
 	"time"
-
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 )
 
 func (cfg *ApiConfig) Login(writer http.ResponseWriter, request *http.Request) {
@@ -29,6 +24,7 @@ func (cfg *ApiConfig) Login(writer http.ResponseWriter, request *http.Request) {
 		return
 
 	}
+	log.Println("User details after login. \n- User:", userDetails.ID, "\n- Hashed Password:", userDetails.HashedPassword, "\n- Created At:", userDetails.CreatedAt, "\n- Updated At:", userDetails.UpdatedAt)
 
 	results := auth.CheckPasswordHash(user.Password, userDetails.HashedPassword)
 	if results != nil {
@@ -41,18 +37,32 @@ func (cfg *ApiConfig) Login(writer http.ResponseWriter, request *http.Request) {
 		respondWithError(writer, http.StatusUnauthorized, errJWTToken.Error())
 		return
 	}
+	log.Println("JWT Token Created with Success:", userJWTToken)
 
 	userResfreshToken, errRefreshToken := MakeRefreshToken()
 	if errRefreshToken != nil {
 		respondWithError(writer, http.StatusUnauthorized, errRefreshToken.Error())
 		return
 	}
+	log.Println("Refresh Token Created with Success:", userResfreshToken)
+	refreshTokenParams := database.CreateRefreshTokenParams{
+		Token:     userResfreshToken,
+		UserID:    userDetails.ID,
+		ExpiresAt: time.Now().Add(time.Duration(60) * 60 * 24 * 60), //default 60 days expire
+	}
+	refreshTokenDetails, errRefreshToken := cfg.Db.CreateRefreshToken(request.Context(), refreshTokenParams)
+	if errRefreshToken != nil {
+		respondWithError(writer, http.StatusUnauthorized, errRefreshToken.Error())
+		return
+	}
+	log.Println("Refresh Token Details Created with Success. \n- User:", refreshTokenDetails.UserID, "\n- Created At:", refreshTokenDetails.CreatedAt, "\n- Updated At:", refreshTokenDetails.UpdatedAt, "\n- Expires At:", refreshTokenDetails.ExpiresAt)
+
 	loginResponse := UserResponse{
 		ID:           userDetails.ID,
 		CreatedAt:    userDetails.CreatedAt,
 		UpdatedAt:    userDetails.UpdatedAt,
 		Email:        user.Email,
-		Token:        &userJWTToken,
+		JWTToken:     &userJWTToken,
 		RefreshToken: userResfreshToken,
 	}
 
@@ -64,62 +74,43 @@ func (cfg *ApiConfig) Login(writer http.ResponseWriter, request *http.Request) {
 	respondWithJSON(writer, http.StatusOK, loginBytes)
 }
 
-func MakeJWT(userID uuid.UUID, tokenSecret string) (string, error) {
-	claim := jwt.RegisteredClaims{
-		Issuer:    "chirpy",
-		Subject:   userID.String(),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(60) * time.Minute)), //default 60 min expire
+func (cfg *ApiConfig) Refresh(writer http.ResponseWriter, request *http.Request) {
+	refreshToken, errToken := GetBearerToken(request.Header)
+	if errToken != nil {
+		respondWithError(writer, http.StatusBadRequest, errToken.Error())
 	}
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claim)
-	token, err := jwtToken.SignedString([]byte(tokenSecret))
+	log.Println("Refresh Token from Request:", refreshToken)
 
-	if err != nil {
-		return "", err
+	dbRefreshToken, dbError := cfg.Db.GetRefreshToken(request.Context(), refreshToken)
+	if dbError != nil {
+		respondWithError(writer, http.StatusUnauthorized, dbError.Error())
+		return
 	}
-	return token, nil
+	log.Println("dbRefreshToken After Request:", dbRefreshToken)
+	newAccessToken, errJWTToken := MakeJWT(dbRefreshToken.UserID, cfg.Secret)
+	if errJWTToken != nil {
+		respondWithError(writer, http.StatusUnauthorized, errJWTToken.Error())
+		return
+	}
+	log.Println("New Access Token Created with Success:", newAccessToken)
+
+	refreshResponse := RefreshResponse{
+		Token: newAccessToken,
+	}
+	responseBytes, errMarshal := json.Marshal(refreshResponse)
+	if errMarshal != nil {
+		respondWithError(writer, http.StatusInternalServerError, errMarshal.Error())
+	}
+	respondWithJSON(writer, http.StatusOK, responseBytes)
 }
 
-func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
-	// Create a new token object by parsing the token string
-	token, err := jwt.ParseWithClaims(
-		tokenString,
-		&jwt.RegisteredClaims{},
-		func(token *jwt.Token) (interface{}, error) {
-			// Return the secret key for validation
-			return []byte(tokenSecret), nil
-		},
-	)
-
-	if err != nil {
-		return uuid.Nil, err
+func (cfg *ApiConfig) Revoke(writer http.ResponseWriter, request *http.Request) {
+	refreshToken, errToken := GetBearerToken(request.Header)
+	if errToken != nil {
+		respondWithError(writer, http.StatusBadRequest, errToken.Error())
 	}
+	log.Println("Refresh Token from Request:", refreshToken)
 
-	subject, err := token.Claims.GetSubject()
-
-	if err != nil {
-		return uuid.Nil, err
-	}
-	return uuid.MustParse(subject), nil
-}
-
-func GetBearerToken(headers http.Header) (string, error) {
-
-	fullHeader := headers.Get("Authorization")
-	headerFields := strings.Fields(fullHeader)
-	if len(headerFields) < 2 {
-		return "", nil
-	}
-
-	token := headerFields[1]
-	return token, nil
-}
-
-func MakeRefreshToken() (string, error) {
-	tokenBytes := make([]byte, 256)
-	number, _ := rand.Read(tokenBytes)
-	fmt.Println(number)
-	myTokenString := hex.EncodeToString(tokenBytes)
-
-	return myTokenString, nil
+	cfg.Db.RevokeRefreshToken(request.Context(), refreshToken)
+	respondWithJSON(writer, http.StatusNoContent, []byte{})
 }
