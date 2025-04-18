@@ -12,6 +12,7 @@ type ApiConfig struct {
 	FileserverHits atomic.Int32
 	Db             *database.Queries
 	Env            string
+	Secret         string
 }
 
 type ChirpMsg struct {
@@ -28,8 +29,7 @@ type ChirpMessageValid struct {
 }
 
 type ChirpRequest struct {
-	Body   string    `json:"body"`
-	UserID uuid.UUID `json:"user_id"`
+	Body string `json:"body"`
 }
 
 type ChirpResponse struct {
@@ -45,6 +45,7 @@ type UserResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	Token     *string   `json:"token,omitempty"`
 }
 type UserAdd struct {
 	Email    string `json:"email"`
@@ -52,6 +53,7 @@ type UserAdd struct {
 }
 
 type UserLogin struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email            string `json:"email"`
+	Password         string `json:"password"`
+	ExpiresInSeconds *int   `json:"expires_in_seconds,omitempty"`
 }

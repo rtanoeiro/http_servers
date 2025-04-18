@@ -27,13 +27,9 @@ func ProcessChirp(request *http.Request) (int32, ChirpRequest, error) {
 	err := decoder.Decode(&chirpRequest)
 
 	if err != nil {
-		errorMsg := ChirpMsgError{
-			Error: "Something went wrong",
-		}
 		return http.StatusInternalServerError, ChirpRequest{
-			Body:   "",
-			UserID: chirpRequest.UserID,
-		}, errors.New(errorMsg.Error)
+			Body: "",
+		}, errors.New(err.Error())
 	}
 
 	if len(chirpRequest.Body) > 140 {
@@ -41,14 +37,13 @@ func ProcessChirp(request *http.Request) (int32, ChirpRequest, error) {
 			Error: "Chirp is too long",
 		}
 		return http.StatusBadRequest, ChirpRequest{
-			Body:   "",
-			UserID: chirpRequest.UserID}, errors.New(errorMsg.Error)
+			Body: "",
+		}, errors.New(errorMsg.Error)
 	}
 
 	msgCleaned := CleanBadWords(chirpRequest.Body)
 	cleanChirp := ChirpRequest{
-		Body:   msgCleaned,
-		UserID: chirpRequest.UserID,
+		Body: msgCleaned,
 	}
 	return http.StatusOK, cleanChirp, nil
 }

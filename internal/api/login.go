@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"http_server/internal/auth"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -14,13 +15,11 @@ func (cfg *ApiConfig) Login(writer http.ResponseWriter, request *http.Request) {
 	decoder := json.NewDecoder(request.Body)
 	user := UserLogin{}
 	err := decoder.Decode(&user)
-
 	if err != nil {
 		respondWithError(writer, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	// hashProvided, errProvided := auth.HashPassword(user.Password)
 	userDetails, loginErr := cfg.Db.CheckUserLogin(request.Context(), user.Email)
 	if loginErr != nil {
 		respondWithError(writer, http.StatusUnauthorized, loginErr.Error())
@@ -34,11 +33,25 @@ func (cfg *ApiConfig) Login(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	var duration time.Duration
+	if user.ExpiresInSeconds == nil {
+		duration = time.Duration(60) * time.Minute
+	} else {
+		duration = time.Duration(*user.ExpiresInSeconds)
+	}
+
+	userToken, errToken := MakeJWT(userDetails.ID, cfg.Secret, duration)
+
+	if errToken != nil {
+		respondWithError(writer, http.StatusUnauthorized, errToken.Error())
+		return
+	}
 	loginResponse := UserResponse{
 		ID:        userDetails.ID,
 		CreatedAt: userDetails.CreatedAt,
 		UpdatedAt: userDetails.UpdatedAt,
 		Email:     user.Email,
+		Token:     &userToken,
 	}
 	loginBytes, marshalError := json.Marshal(loginResponse)
 
@@ -86,4 +99,16 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 		return uuid.Nil, err
 	}
 	return uuid.MustParse(subject), nil
+}
+
+func GetBearerToken(headers http.Header) (string, error) {
+
+	fullHeader := headers.Get("Authorization")
+	headerFields := strings.Fields(fullHeader)
+	if len(headerFields) < 2 {
+		return "", nil
+	}
+
+	token := headerFields[1]
+	return token, nil
 }

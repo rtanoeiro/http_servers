@@ -12,34 +12,47 @@ import (
 
 func (cfg *ApiConfig) InsertChirp(writer http.ResponseWriter, request *http.Request) {
 
+	token, _ := GetBearerToken(request.Header)
+	jwtUserID, errorJWT := ValidateJWT(token, cfg.Secret)
+
+	if errorJWT != nil {
+		respondWithError(writer, http.StatusUnauthorized, errorJWT.Error())
+		return
+	}
+
 	httpStatusCode, chirpRequest, valError := ProcessChirp(request)
+	fmt.Println("Chirp Procesed: \n - Body:", chirpRequest.Body, "\n - Error:", valError)
+	fmt.Println("User ID From Token: ", jwtUserID, "Error from JWT Token", errorJWT)
 
 	if valError != nil {
 		respondWithError(writer, int(httpStatusCode), valError.Error())
+		return
 	}
 	args := database.InsertChirpParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 		Body:      chirpRequest.Body,
-		UserID:    chirpRequest.UserID,
+		UserID:    jwtUserID,
 	}
 	chirp, errorInsert := cfg.Db.InsertChirp(request.Context(), args)
 
 	if errorInsert != nil {
 		respondWithError(writer, http.StatusInternalServerError, errorInsert.Error())
+		return
 	}
 	chirpResponse := ChirpResponse{
 		ID:        chirp.ID,
 		CreatedAt: chirp.CreatedAt,
 		UpdatedAt: chirp.UpdatedAt,
 		Body:      chirp.Body,
-		UserID:    chirp.UserID,
+		UserID:    jwtUserID,
 	}
 	chirpBytes, marshalError := json.Marshal(chirpResponse)
 
 	if marshalError != nil {
 		respondWithError(writer, http.StatusInternalServerError, marshalError.Error())
+		return
 	}
 	respondWithJSON(writer, http.StatusCreated, chirpBytes)
 }
@@ -49,6 +62,7 @@ func (cfg *ApiConfig) GetAllChirps(writer http.ResponseWriter, request *http.Req
 
 	if chirpError != nil {
 		respondWithError(writer, http.StatusInternalServerError, chirpError.Error())
+		return
 	}
 
 	chirpsResponse := make([]ChirpResponse, len(allChirps))
@@ -65,17 +79,18 @@ func (cfg *ApiConfig) GetAllChirps(writer http.ResponseWriter, request *http.Req
 
 	if err != nil {
 		respondWithError(writer, http.StatusInternalServerError, err.Error())
+		return
 	}
 	respondWithJSON(writer, http.StatusOK, chirpsBytes)
 }
 
 func (cfg *ApiConfig) GetSingleChirp(writer http.ResponseWriter, request *http.Request) {
 	chirpID := uuid.MustParse(request.PathValue("chirpID"))
-	fmt.Println("Parsing ChirpID:", chirpID)
 	chirp, chirpError := cfg.Db.GetSingleChirp(request.Context(), chirpID)
 
 	if chirpError != nil {
 		respondWithError(writer, http.StatusNotFound, chirpError.Error())
+		return
 	}
 
 	chirpResponse := ChirpResponse{
@@ -89,6 +104,7 @@ func (cfg *ApiConfig) GetSingleChirp(writer http.ResponseWriter, request *http.R
 
 	if err != nil {
 		respondWithError(writer, http.StatusInternalServerError, err.Error())
+		return
 	}
 	respondWithJSON(writer, http.StatusOK, chirpsBytes)
 }

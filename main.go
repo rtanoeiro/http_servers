@@ -22,6 +22,7 @@ func main() {
 
 	dbURL := os.Getenv("DB_URL")
 	env := os.Getenv("ENV")
+	secret := os.Getenv("SECRET")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		fmt.Println("Error connecting to the database:", err)
@@ -32,6 +33,7 @@ func main() {
 		FileserverHits: atomic.Int32{},
 		Db:             databaseQueries,
 		Env:            env,
+		Secret:         secret,
 	}
 
 	httpServerMux := http.NewServeMux()

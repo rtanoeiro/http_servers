@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"http_server/internal/auth"
 	"http_server/internal/database"
-	"log"
 	"net/http"
 	"time"
 
@@ -25,7 +24,7 @@ func (config *ApiConfig) CreateUser(writer http.ResponseWriter, request *http.Re
 		data, err := json.Marshal(errorMsg)
 
 		if err != nil {
-			respondWithError(writer, http.StatusInternalServerError, "Error marshalling JSON during initial request check")
+			respondWithError(writer, http.StatusInternalServerError, err.Error())
 			return
 		}
 		respondWithJSON(writer, http.StatusOK, data)
@@ -45,8 +44,7 @@ func (config *ApiConfig) CreateUser(writer http.ResponseWriter, request *http.Re
 	}
 	createdUser, createError := config.Db.CreateUser(request.Context(), createUser)
 	if createError != nil {
-		log.Println("CreateUser error:", createError)
-		respondWithError(writer, http.StatusInternalServerError, "Unable to create user")
+		respondWithError(writer, http.StatusInternalServerError, createError.Error())
 		return
 	}
 
@@ -59,7 +57,7 @@ func (config *ApiConfig) CreateUser(writer http.ResponseWriter, request *http.Re
 	data, err := json.Marshal(returnUser)
 
 	if err != nil {
-		respondWithError(writer, http.StatusInternalServerError, "Error marshalling JSON during initial request check")
+		respondWithError(writer, http.StatusInternalServerError, err.Error())
 		return
 	}
 	respondWithJSON(writer, http.StatusCreated, data)
