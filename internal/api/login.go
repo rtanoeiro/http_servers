@@ -22,13 +22,13 @@ func (cfg *ApiConfig) Login(writer http.ResponseWriter, request *http.Request) {
 		return
 
 	}
-	log.Println("User details after login. \n- User:", userDetails.ID, "\n- Hashed Password:", userDetails.HashedPassword, "\n- Created At:", userDetails.CreatedAt, "\n- Updated At:", userDetails.UpdatedAt)
 
 	results := auth.CheckPasswordHash(user.Password, userDetails.HashedPassword)
 	if results != nil {
 		respondWithError(writer, http.StatusUnauthorized, results.Error())
 		return
 	}
+	log.Println("User details after login. \n- User:", userDetails.ID, "\n- Hashed Password:", userDetails.HashedPassword, "\n- Created At:", userDetails.CreatedAt, "\n- Updated At:", userDetails.UpdatedAt)
 
 	userJWTToken, errJWTToken := MakeJWT(userDetails.ID, cfg.Secret)
 	if errJWTToken != nil {

@@ -12,7 +12,7 @@ import (
 
 func (cfg *ApiConfig) InsertChirp(writer http.ResponseWriter, request *http.Request) {
 
-	jwtUserID, errorJWT := CheckJWT(request, cfg, writer)
+	jwtUserID, errorJWT := CheckJWT(writer, request, cfg)
 	if errorJWT != nil {
 		// the checkjwt already populats response
 		return
@@ -54,7 +54,38 @@ func (cfg *ApiConfig) InsertChirp(writer http.ResponseWriter, request *http.Requ
 	respondWithJSON(writer, http.StatusCreated, chirpBytes)
 }
 
-func CheckJWT(request *http.Request, cfg *ApiConfig, writer http.ResponseWriter) (uuid.UUID, error) {
+func (cfg *ApiConfig) DeleteChirp(writer http.ResponseWriter, request *http.Request) {
+
+	chirpID := uuid.MustParse(request.PathValue("chirpID"))
+	jwtUserID, errorJWT := CheckJWT(writer, request, cfg)
+
+	if errorJWT != nil {
+		respondWithError(writer, http.StatusInternalServerError, errorJWT.Error())
+		return
+	}
+
+	chirpDetails, chirpError := cfg.Db.GetSingleChirp(request.Context(), chirpID)
+
+	if chirpError != nil {
+		respondWithError(writer, http.StatusNotFound, chirpError.Error())
+		return
+	}
+
+	if chirpDetails.UserID != jwtUserID {
+		respondWithError(writer, http.StatusForbidden, "Not allowed to delete chirp from other user")
+		return
+	}
+
+	errorDelete := cfg.Db.DeleteChirp(request.Context(), chirpID)
+
+	if errorDelete != nil {
+		respondWithError(writer, http.StatusNotFound, errorDelete.Error())
+		return
+	}
+	respondWithJSON(writer, http.StatusNoContent, []byte{})
+}
+
+func CheckJWT(writer http.ResponseWriter, request *http.Request, cfg *ApiConfig) (uuid.UUID, error) {
 	token, errBearer := GetBearerToken(request.Header)
 
 	if errBearer != nil {

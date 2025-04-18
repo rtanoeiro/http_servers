@@ -44,11 +44,15 @@ func main() {
 	httpServerMux.Handle("GET /api/healthz/", myApiConfig.MiddlewareMetricsInc(http.HandlerFunc(api.Healthz)))
 	httpServerMux.Handle("GET /admin/metrics", http.HandlerFunc(myApiConfig.Metrics))
 	httpServerMux.Handle("POST /admin/reset", http.HandlerFunc(myApiConfig.ResetUsers))
+	httpServerMux.Handle("POST /api/login", http.HandlerFunc(myApiConfig.Login))
+
 	httpServerMux.Handle("POST /api/users", http.HandlerFunc(myApiConfig.CreateUser))
 	httpServerMux.Handle("PUT /api/users", http.HandlerFunc(myApiConfig.UpdateUser))
+
 	httpServerMux.Handle("POST /api/refresh", http.HandlerFunc(myApiConfig.Refresh))
 	httpServerMux.Handle("POST /api/revoke", http.HandlerFunc(myApiConfig.Revoke))
-	httpServerMux.Handle("POST /api/login", http.HandlerFunc(myApiConfig.Login))
+
+	httpServerMux.Handle("DELETE /api/chirps/{chirpID}", http.HandlerFunc(myApiConfig.DeleteChirp))
 	httpServerMux.Handle("POST /api/chirps", http.HandlerFunc(myApiConfig.InsertChirp))
 	httpServerMux.Handle("GET /api/chirps", http.HandlerFunc(myApiConfig.GetAllChirps))
 	httpServerMux.Handle("GET /api/chirps/{chirpID}", http.HandlerFunc(myApiConfig.GetSingleChirp))
