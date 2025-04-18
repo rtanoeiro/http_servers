@@ -1,7 +1,10 @@
 package api
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"http_server/internal/auth"
 	"net/http"
 	"strings"
@@ -33,28 +36,27 @@ func (cfg *ApiConfig) Login(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	var duration time.Duration
-	if user.ExpiresInSeconds == nil {
-		duration = time.Duration(60) * time.Minute
-	} else {
-		duration = time.Duration(*user.ExpiresInSeconds)
+	userJWTToken, errJWTToken := MakeJWT(userDetails.ID, cfg.Secret)
+	if errJWTToken != nil {
+		respondWithError(writer, http.StatusUnauthorized, errJWTToken.Error())
+		return
 	}
 
-	userToken, errToken := MakeJWT(userDetails.ID, cfg.Secret, duration)
-
-	if errToken != nil {
-		respondWithError(writer, http.StatusUnauthorized, errToken.Error())
+	userResfreshToken, errRefreshToken := MakeRefreshToken()
+	if errRefreshToken != nil {
+		respondWithError(writer, http.StatusUnauthorized, errRefreshToken.Error())
 		return
 	}
 	loginResponse := UserResponse{
-		ID:        userDetails.ID,
-		CreatedAt: userDetails.CreatedAt,
-		UpdatedAt: userDetails.UpdatedAt,
-		Email:     user.Email,
-		Token:     &userToken,
+		ID:           userDetails.ID,
+		CreatedAt:    userDetails.CreatedAt,
+		UpdatedAt:    userDetails.UpdatedAt,
+		Email:        user.Email,
+		Token:        &userJWTToken,
+		RefreshToken: userResfreshToken,
 	}
-	loginBytes, marshalError := json.Marshal(loginResponse)
 
+	loginBytes, marshalError := json.Marshal(loginResponse)
 	if marshalError != nil {
 		respondWithError(writer, http.StatusUnauthorized, marshalError.Error())
 		return
@@ -62,12 +64,12 @@ func (cfg *ApiConfig) Login(writer http.ResponseWriter, request *http.Request) {
 	respondWithJSON(writer, http.StatusOK, loginBytes)
 }
 
-func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (string, error) {
+func MakeJWT(userID uuid.UUID, tokenSecret string) (string, error) {
 	claim := jwt.RegisteredClaims{
 		Issuer:    "chirpy",
 		Subject:   userID.String(),
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiresIn)),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(60) * time.Minute)), //default 60 min expire
 	}
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claim)
 	token, err := jwtToken.SignedString([]byte(tokenSecret))
@@ -111,4 +113,13 @@ func GetBearerToken(headers http.Header) (string, error) {
 
 	token := headerFields[1]
 	return token, nil
+}
+
+func MakeRefreshToken() (string, error) {
+	tokenBytes := make([]byte, 256)
+	number, _ := rand.Read(tokenBytes)
+	fmt.Println(number)
+	myTokenString := hex.EncodeToString(tokenBytes)
+
+	return myTokenString, nil
 }
