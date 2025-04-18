@@ -85,7 +85,7 @@ func GetLoginDetails(writer http.ResponseWriter, request *http.Request) (UserLog
 }
 
 func (cfg *ApiConfig) Refresh(writer http.ResponseWriter, request *http.Request) {
-	refreshToken, errToken := GetBearerToken(request.Header)
+	refreshToken, errToken := GetAuthorizationField(request.Header)
 	if errToken != nil {
 		respondWithError(writer, http.StatusBadRequest, errToken.Error())
 	}
@@ -115,7 +115,7 @@ func (cfg *ApiConfig) Refresh(writer http.ResponseWriter, request *http.Request)
 }
 
 func (cfg *ApiConfig) Revoke(writer http.ResponseWriter, request *http.Request) {
-	refreshToken, errToken := GetBearerToken(request.Header)
+	refreshToken, errToken := GetAuthorizationField(request.Header)
 	if errToken != nil {
 		respondWithError(writer, http.StatusBadRequest, errToken.Error())
 	}
@@ -133,7 +133,7 @@ func (cfg *ApiConfig) UpdateUser(writer http.ResponseWriter, request *http.Reque
 	}
 	log.Println("Update User Details during Update:", updateDetails)
 
-	accesToken, errToken := GetBearerToken(request.Header)
+	accesToken, errToken := GetAuthorizationField(request.Header)
 	if errToken != nil {
 		respondWithError(writer, http.StatusUnauthorized, errToken.Error())
 		return

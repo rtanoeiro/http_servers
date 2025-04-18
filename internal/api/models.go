@@ -13,6 +13,7 @@ type ApiConfig struct {
 	Db             *database.Queries
 	Env            string
 	Secret         string
+	ApiKey         string
 }
 
 type ChirpMsgError struct {

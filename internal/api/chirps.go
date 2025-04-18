@@ -86,7 +86,7 @@ func (cfg *ApiConfig) DeleteChirp(writer http.ResponseWriter, request *http.Requ
 }
 
 func CheckJWT(writer http.ResponseWriter, request *http.Request, cfg *ApiConfig) (uuid.UUID, error) {
-	token, errBearer := GetBearerToken(request.Header)
+	token, errBearer := GetAuthorizationField(request.Header)
 
 	if errBearer != nil {
 		respondWithError(writer, http.StatusUnauthorized, errBearer.Error())

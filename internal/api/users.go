@@ -67,6 +67,15 @@ func (config *ApiConfig) CreateUser(writer http.ResponseWriter, request *http.Re
 }
 
 func (cfg *ApiConfig) UpgradeUser(writer http.ResponseWriter, request *http.Request) {
+
+	apiKey, errApi := GetAuthorizationField(request.Header)
+
+	if apiKey != cfg.ApiKey {
+		respondWithError(writer, http.StatusUnauthorized, "invalid api key")
+	}
+	if errApi != nil {
+		respondWithError(writer, http.StatusUnauthorized, errApi.Error())
+	}
 	decoder := json.NewDecoder(request.Body)
 	webhook := PolkaWebHook{}
 	err := decoder.Decode(&webhook)

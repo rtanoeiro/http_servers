@@ -106,12 +106,12 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 	return uuid.MustParse(subject), nil
 }
 
-func GetBearerToken(headers http.Header) (string, error) {
+func GetAuthorizationField(headers http.Header) (string, error) {
 
 	fullHeader := headers.Get("Authorization")
 	headerFields := strings.Fields(fullHeader)
 	if len(headerFields) < 2 {
-		return "", errors.New("invalid Authorization header format, it contains less than 2 fields")
+		return "", errors.New("invalid header format, unable to perform action")
 	}
 
 	token := headerFields[1]
