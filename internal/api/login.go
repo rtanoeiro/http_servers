@@ -62,6 +62,7 @@ func (cfg *ApiConfig) Login(writer http.ResponseWriter, request *http.Request) {
 		Email:        user.Email,
 		JWTToken:     &userJWTToken,
 		RefreshToken: userResfreshToken,
+		IsChirpyRed:  userDetails.IsChirpyRed,
 	}
 
 	loginBytes, marshalError := json.Marshal(loginResponse)
@@ -153,7 +154,7 @@ func (cfg *ApiConfig) UpdateUser(writer http.ResponseWriter, request *http.Reque
 	}
 	log.Println("User ID from DB during update:", userDbID)
 
-	if userID != userDbID {
+	if userID != userDbID.ID {
 		respondWithError(writer, http.StatusUnauthorized, "Unable to update email/password for other user")
 		return
 	}

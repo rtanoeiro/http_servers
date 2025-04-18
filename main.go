@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"http_server/internal/api"
 	"http_server/internal/database"
 	"log"
@@ -25,7 +24,7 @@ func main() {
 	secret := os.Getenv("SECRET")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		fmt.Println("Error connecting to the database:", err)
+		log.Println("Error connecting to the database:", err)
 	}
 	databaseQueries := database.New(db)
 
@@ -48,7 +47,7 @@ func main() {
 
 	httpServerMux.Handle("POST /api/users", http.HandlerFunc(myApiConfig.CreateUser))
 	httpServerMux.Handle("PUT /api/users", http.HandlerFunc(myApiConfig.UpdateUser))
-
+	httpServerMux.Handle("POST /api/polka/webhooks", http.HandlerFunc(myApiConfig.UpgradeUser))
 	httpServerMux.Handle("POST /api/refresh", http.HandlerFunc(myApiConfig.Refresh))
 	httpServerMux.Handle("POST /api/revoke", http.HandlerFunc(myApiConfig.Revoke))
 

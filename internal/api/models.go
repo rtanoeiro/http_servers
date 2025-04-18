@@ -42,6 +42,7 @@ type UserResponse struct {
 	Email        string    `json:"email"`
 	JWTToken     *string   `json:"token,omitempty"`
 	RefreshToken string    `json:"refresh_token"`
+	IsChirpyRed  bool      `json:"is_chirpy_red"`
 }
 type UserAdd struct {
 	Email    string `json:"email"`
@@ -49,10 +50,18 @@ type UserAdd struct {
 }
 
 type UserLogin struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email       string `json:"email"`
+	Password    string `json:"password"`
+	IsChirpyRed bool   `json:"is_chirpy_red"`
 }
 
 type UpdateUser struct {
 	Email string `json:"email"`
+}
+
+type PolkaWebHook struct {
+	Event string `json:"event"`
+	Data  struct {
+		UserID uuid.UUID `json:"user_id"`
+	} `json:"data"`
 }

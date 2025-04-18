@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"http_server/internal/auth"
 	"http_server/internal/database"
+	"log"
 	"net/http"
 	"time"
 
@@ -49,10 +50,11 @@ func (config *ApiConfig) CreateUser(writer http.ResponseWriter, request *http.Re
 	}
 
 	returnUser := UserResponse{
-		ID:        createUser.ID,
-		CreatedAt: createUser.CreatedAt,
-		UpdatedAt: createUser.UpdatedAt,
-		Email:     createdUser.Email,
+		ID:          createUser.ID,
+		CreatedAt:   createUser.CreatedAt,
+		UpdatedAt:   createUser.UpdatedAt,
+		Email:       createdUser.Email,
+		IsChirpyRed: createdUser.IsChirpyRed,
 	}
 	data, err := json.Marshal(returnUser)
 
@@ -62,6 +64,35 @@ func (config *ApiConfig) CreateUser(writer http.ResponseWriter, request *http.Re
 	}
 	respondWithJSON(writer, http.StatusCreated, data)
 
+}
+
+func (cfg *ApiConfig) UpgradeUser(writer http.ResponseWriter, request *http.Request) {
+	decoder := json.NewDecoder(request.Body)
+	webhook := PolkaWebHook{}
+	err := decoder.Decode(&webhook)
+
+	if err != nil {
+		respondWithError(writer, http.StatusInternalServerError, err.Error())
+		return
+	}
+	log.Println("Webhook received:", webhook.Event)
+
+	if webhook.Event != "user.upgraded" {
+		respondWithError(writer, http.StatusNoContent, "invalid event")
+		return
+	}
+
+	resultsDBUserID, errUpgrade := cfg.Db.UpgradeToChirpy(request.Context(), webhook.Data.UserID)
+	if errUpgrade != nil {
+		respondWithError(writer, http.StatusNotFound, errUpgrade.Error())
+		return
+	}
+
+	if resultsDBUserID != uuid.Nil {
+		log.Println("User upgraded to Chirpy Red with success. \n- User ID:", resultsDBUserID)
+		respondWithJSON(writer, http.StatusNoContent, []byte{})
+		return
+	}
 }
 
 func (cfg *ApiConfig) ResetUsers(writer http.ResponseWriter, request *http.Request) {
