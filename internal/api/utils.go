@@ -20,32 +20,24 @@ func respondWithJSON(writer http.ResponseWriter, code int, data []byte) {
 	writer.Write(data)
 }
 
-func ProcessChirp(request *http.Request) (int32, ChirpRequest, error) {
+func ProcessChirp(writer http.ResponseWriter, request *http.Request) (ChirpRequest, error) {
 
 	decoder := json.NewDecoder(request.Body)
 	chirpRequest := ChirpRequest{}
 	err := decoder.Decode(&chirpRequest)
 
 	if err != nil {
-		return http.StatusInternalServerError, ChirpRequest{
-			Body: "",
-		}, errors.New(err.Error())
+		respondWithError(writer, http.StatusBadRequest, err.Error())
+		return ChirpRequest{Body: ""}, errors.New(err.Error())
 	}
 
 	if len(chirpRequest.Body) > 140 {
-		errorMsg := ChirpMsgError{
-			Error: "Chirp is too long",
-		}
-		return http.StatusBadRequest, ChirpRequest{
-			Body: "",
-		}, errors.New(errorMsg.Error)
+		respondWithError(writer, http.StatusBadRequest, "chirp is too long")
+		return ChirpRequest{Body: ""}, errors.New("chirp is too long")
 	}
-
 	msgCleaned := CleanBadWords(chirpRequest.Body)
-	cleanChirp := ChirpRequest{
-		Body: msgCleaned,
-	}
-	return http.StatusOK, cleanChirp, nil
+	cleanChirp := ChirpRequest{Body: msgCleaned}
+	return cleanChirp, nil
 }
 
 func CleanBadWords(text string) string {

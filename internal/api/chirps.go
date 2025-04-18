@@ -12,20 +12,17 @@ import (
 
 func (cfg *ApiConfig) InsertChirp(writer http.ResponseWriter, request *http.Request) {
 
-	token, _ := GetBearerToken(request.Header)
-	jwtUserID, errorJWT := ValidateJWT(token, cfg.Secret)
-
+	jwtUserID, errorJWT := CheckJWT(request, cfg, writer)
 	if errorJWT != nil {
-		respondWithError(writer, http.StatusUnauthorized, errorJWT.Error())
+		// the checkjwt already populats response
 		return
 	}
 
-	httpStatusCode, chirpRequest, valError := ProcessChirp(request)
+	chirpRequest, valError := ProcessChirp(writer, request)
 	fmt.Println("Chirp Procesed: \n - Body:", chirpRequest.Body, "\n - Error:", valError)
 	fmt.Println("User ID From Token: ", jwtUserID, "\nError from JWT Token", errorJWT)
 
 	if valError != nil {
-		respondWithError(writer, int(httpStatusCode), valError.Error())
 		return
 	}
 	args := database.InsertChirpParams{
@@ -55,6 +52,23 @@ func (cfg *ApiConfig) InsertChirp(writer http.ResponseWriter, request *http.Requ
 		return
 	}
 	respondWithJSON(writer, http.StatusCreated, chirpBytes)
+}
+
+func CheckJWT(request *http.Request, cfg *ApiConfig, writer http.ResponseWriter) (uuid.UUID, error) {
+	token, errBearer := GetBearerToken(request.Header)
+
+	if errBearer != nil {
+		respondWithError(writer, http.StatusUnauthorized, errBearer.Error())
+		return uuid.UUID{}, errBearer
+	}
+
+	jwtUserID, errorJWT := ValidateJWT(token, cfg.Secret)
+
+	if errorJWT != nil {
+		respondWithError(writer, http.StatusUnauthorized, errorJWT.Error())
+		return uuid.UUID{}, errorJWT
+	}
+	return jwtUserID, nil
 }
 
 func (cfg *ApiConfig) GetAllChirps(writer http.ResponseWriter, request *http.Request) {
