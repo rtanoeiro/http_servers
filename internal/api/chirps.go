@@ -22,7 +22,7 @@ func (cfg *ApiConfig) InsertChirp(writer http.ResponseWriter, request *http.Requ
 
 	httpStatusCode, chirpRequest, valError := ProcessChirp(request)
 	fmt.Println("Chirp Procesed: \n - Body:", chirpRequest.Body, "\n - Error:", valError)
-	fmt.Println("User ID From Token: ", jwtUserID, "Error from JWT Token", errorJWT)
+	fmt.Println("User ID From Token: ", jwtUserID, "\nError from JWT Token", errorJWT)
 
 	if valError != nil {
 		respondWithError(writer, int(httpStatusCode), valError.Error())
