@@ -55,7 +55,7 @@ func main() {
 
 	httpServerMux.Handle("DELETE /api/chirps/{chirpID}", http.HandlerFunc(myApiConfig.DeleteChirp))
 	httpServerMux.Handle("POST /api/chirps", http.HandlerFunc(myApiConfig.InsertChirp))
-	httpServerMux.Handle("GET /api/chirps", http.HandlerFunc(myApiConfig.GetAllChirps))
+	httpServerMux.Handle("GET /api/chirps", http.HandlerFunc(myApiConfig.GetChirps))
 	httpServerMux.Handle("GET /api/chirps/{chirpID}", http.HandlerFunc(myApiConfig.GetSingleChirp))
 
 	httpServer := http.Server{

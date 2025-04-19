@@ -27,27 +27,78 @@ SELECT
     id,
     created_at,
     updated_at,
-    body,
-    user_id
+    body
 FROM chirps
 ORDER BY created_at
 `
 
-func (q *Queries) GetAllChirps(ctx context.Context) ([]Chirp, error) {
+type GetAllChirpsRow struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Body      string
+}
+
+func (q *Queries) GetAllChirps(ctx context.Context) ([]GetAllChirpsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getAllChirps)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Chirp
+	var items []GetAllChirpsRow
 	for rows.Next() {
-		var i Chirp
+		var i GetAllChirpsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Body,
-			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAuthorChirps = `-- name: GetAuthorChirps :many
+SELECT
+    id,
+    created_at,
+    updated_at,
+    body
+FROM chirps
+WHERE user_id = $1
+ORDER by created_at
+`
+
+type GetAuthorChirpsRow struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Body      string
+}
+
+func (q *Queries) GetAuthorChirps(ctx context.Context, userID uuid.UUID) ([]GetAuthorChirpsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAuthorChirps, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAuthorChirpsRow
+	for rows.Next() {
+		var i GetAuthorChirpsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Body,
 		); err != nil {
 			return nil, err
 		}

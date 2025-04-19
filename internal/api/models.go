@@ -21,7 +21,8 @@ type ChirpMsgError struct {
 }
 
 type ChirpRequest struct {
-	Body string `json:"body"`
+	Body     string `json:"body"`
+	AuthorID string `json:"author_id"`
 }
 
 type ChirpResponse struct {
@@ -30,6 +31,13 @@ type ChirpResponse struct {
 	UpdatedAt time.Time `json:"updated_at"`
 	Body      string    `json:"body"`
 	UserID    uuid.UUID `json:"user_id"`
+}
+
+type AuthorChirpResponse struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
 }
 
 type RefreshResponse struct {

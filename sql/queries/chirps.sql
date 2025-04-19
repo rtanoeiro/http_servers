@@ -9,8 +9,7 @@ SELECT
     id,
     created_at,
     updated_at,
-    body,
-    user_id
+    body
 FROM chirps
 ORDER BY created_at;
 
@@ -23,6 +22,16 @@ SELECT
     user_id
 FROM chirps
 WHERE id = $1;
+
+-- name: GetAuthorChirps :many
+SELECT
+    id,
+    created_at,
+    updated_at,
+    body
+FROM chirps
+WHERE user_id = $1
+ORDER by created_at;
 
 -- name: DeleteChirp :exec
 DELETE FROM chirps

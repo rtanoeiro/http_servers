@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"http_server/internal/database"
+	"log"
 	"net/http"
 	"time"
 
@@ -102,22 +103,74 @@ func CheckJWT(writer http.ResponseWriter, request *http.Request, cfg *ApiConfig)
 	return jwtUserID, nil
 }
 
-func (cfg *ApiConfig) GetAllChirps(writer http.ResponseWriter, request *http.Request) {
+func (cfg *ApiConfig) GetOnlyAuthorChirps(request *http.Request, author_id string) ([]AuthorChirpResponse, error) {
+
+	allChirps, chirpError := cfg.Db.GetAuthorChirps(request.Context(), uuid.MustParse(author_id))
+
+	if chirpError != nil {
+		return []AuthorChirpResponse{}, nil
+	}
+
+	chirpsResponse := make([]AuthorChirpResponse, len(allChirps))
+	for i, chirp := range allChirps {
+		chirpsResponse[i] = AuthorChirpResponse{
+			ID:        chirp.ID,
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
+			Body:      chirp.Body,
+		}
+	}
+
+	return chirpsResponse, nil
+}
+
+func (cfg *ApiConfig) GetAllAvailableChirps(request *http.Request) ([]AuthorChirpResponse, error) {
+
 	allChirps, chirpError := cfg.Db.GetAllChirps(request.Context())
+
+	if chirpError != nil {
+		return []AuthorChirpResponse{}, nil
+	}
+
+	chirpsResponse := make([]AuthorChirpResponse, len(allChirps))
+	for i, chirp := range allChirps {
+		chirpsResponse[i] = AuthorChirpResponse{
+			ID:        chirp.ID,
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
+			Body:      chirp.Body,
+		}
+	}
+
+	return chirpsResponse, nil
+}
+
+func (cfg *ApiConfig) GetChirps(writer http.ResponseWriter, request *http.Request) {
+
+	author := request.URL.Query().Get("author_id")
+	log.Println("Author ID: ", author)
+
+	var allChirps []AuthorChirpResponse
+	var chirpError error
+
+	if author != "" {
+		allChirps, chirpError = cfg.GetOnlyAuthorChirps(request, author)
+	} else {
+		allChirps, chirpError = cfg.GetAllAvailableChirps(request)
+	}
 
 	if chirpError != nil {
 		respondWithError(writer, http.StatusInternalServerError, chirpError.Error())
 		return
 	}
 
-	chirpsResponse := make([]ChirpResponse, len(allChirps))
+	chirpsResponse := make([]AuthorChirpResponse, len(allChirps))
 	for i, chirp := range allChirps {
-		chirpsResponse[i] = ChirpResponse{
+		chirpsResponse[i] = AuthorChirpResponse{
 			ID:        chirp.ID,
 			CreatedAt: chirp.CreatedAt,
 			UpdatedAt: chirp.UpdatedAt,
 			Body:      chirp.Body,
-			UserID:    chirp.UserID,
 		}
 	}
 	chirpsBytes, err := json.Marshal(chirpsResponse)
