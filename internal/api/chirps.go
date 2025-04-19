@@ -6,6 +6,7 @@ import (
 	"http_server/internal/database"
 	"log"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -149,6 +150,7 @@ func (cfg *ApiConfig) GetChirps(writer http.ResponseWriter, request *http.Reques
 
 	author := request.URL.Query().Get("author_id")
 	log.Println("Author ID: ", author)
+	sorting := request.URL.Query().Get("sort")
 
 	var allChirps []AuthorChirpResponse
 	var chirpError error
@@ -173,6 +175,13 @@ func (cfg *ApiConfig) GetChirps(writer http.ResponseWriter, request *http.Reques
 			Body:      chirp.Body,
 		}
 	}
+
+	if sorting == "desc" {
+		sort.Slice(chirpsResponse, func(i, j int) bool {
+			return chirpsResponse[i].CreatedAt.After(chirpsResponse[j].CreatedAt)
+		})
+	}
+
 	chirpsBytes, err := json.Marshal(chirpsResponse)
 
 	if err != nil {
